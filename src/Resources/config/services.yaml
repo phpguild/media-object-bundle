@@ -1,0 +1,16 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  PhpGuild\MediaObjectBundle\:
+    resource: '../../*'
+    exclude: '../../{DependencyInjection,Resources,PhpGuildMediaObjectBundle.php}'
+
+  PhpGuild\MediaObjectBundle\EventSubscriber\ResolveMediaObjectSubscriber:
+    tags:
+      - { name: 'doctrine.event_subscriber' }
+
+  PhpGuild\MediaObjectBundle\EventSubscriber\FileSubscriber:
+    tags:
+      - { name: 'doctrine.event_subscriber' }
