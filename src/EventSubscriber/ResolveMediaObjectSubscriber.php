@@ -99,8 +99,6 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
             $value = $context->getScheme() . '://' . $context->getHost() .
                 ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
                 ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
-                $context->getBaseUrl() .
-                ($context->getQueryString() ? '?' . $context->getQueryString() : '') .
                 $this->fileUploader->getRelativeFile($this->propertyAccessor->getValue($entity, $property->name))
             ;
 
@@ -121,7 +119,7 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
             return;
         }
 
-        $this->resolveMediaObject($entity);
+        $this->resolveObject($entity);
     }
 
     /**
@@ -137,16 +135,16 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
             return;
         }
 
-        $this->resolveMediaObject($entity, $args->getEntityChangeSet());
+        $this->resolveObject($entity, $args->getEntityChangeSet());
     }
 
     /**
-     * resolveMediaObject
+     * resolveObject
      *
      * @param MediaObjectInterface $entity
      * @param array             $changeSet
      */
-    public function resolveMediaObject(MediaObjectInterface $entity, array $changeSet = []): void
+    public function resolveObject(MediaObjectInterface $entity, array $changeSet = []): void
     {
         /**
          * @var \ReflectionProperty $property
