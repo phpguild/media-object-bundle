@@ -95,12 +95,18 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
          */
         foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
             $context = $this->urlGenerator->getContext();
+            $value = $this->propertyAccessor->getValue($entity, $property->name);
 
-            $value = $context->getScheme() . '://' . $context->getHost() .
-                ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
-                ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
-                $this->fileUploader->getRelativeFile($this->propertyAccessor->getValue($entity, $property->name))
-            ;
+            if (
+                0 !== strncmp('http://', $value, 7)
+                && 0 !== strncmp('https://', $value, 8)
+            ) {
+                $value = $context->getScheme() . '://' . $context->getHost() .
+                    ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
+                    ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
+                    $this->fileUploader->getRelativeFile($value)
+                ;
+            }
 
             $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $value);
         }
