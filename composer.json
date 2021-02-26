@@ -12,8 +12,8 @@
   ],
   "require": {
     "php": ">=7.1",
-    "symfony/mime": "*",
-    "symfony/orm-pack": "^2.1"
+    "phpguild/doctrine-extra-bundle": "^1.0",
+    "symfony/mime": "*"
   },
   "autoload": {
     "psr-4": {
