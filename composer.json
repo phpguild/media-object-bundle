@@ -13,6 +13,8 @@
   "require": {
     "php": ">=7.1",
     "phpguild/doctrine-extra-bundle": "^1.0",
+    "symfony/property-access": "*",
+    "symfony/serializer": "*",
     "symfony/mime": "*"
   },
   "autoload": {

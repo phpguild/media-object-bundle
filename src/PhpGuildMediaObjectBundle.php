@@ -24,6 +24,6 @@ class PhpGuildMediaObjectBundle extends Bundle
             $this->extension = new PhpGuildMediaObjectExtension();
         }
 
-        return $this->extension;
+        return parent::getContainerExtension();
     }
 }

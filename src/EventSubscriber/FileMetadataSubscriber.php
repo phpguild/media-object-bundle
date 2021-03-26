@@ -11,9 +11,9 @@ use Doctrine\ORM\Mapping\MappingException;
 use PhpGuild\MediaObjectBundle\Model\File\FileInterface;
 
 /**
- * Class FileSubscriber
+ * Class FileMetadataSubscriber
  */
-final class FileSubscriber implements EventSubscriber
+final class FileMetadataSubscriber implements EventSubscriber
 {
     /**
      * getSubscribedEvents

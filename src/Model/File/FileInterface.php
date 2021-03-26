@@ -16,18 +16,18 @@ interface FileInterface extends MediaObjectInterface
     /**
      * getFile
      *
-     * @return string|null
+     * @return mixed|null
      */
-    public function getFile(): ?string;
+    public function getFile();
 
     /**
      * setFile
      *
-     * @param string|null $file
+     * @param mixed|null $file
      *
-     * @return FileInterface|self
+     * @return FileInterface
      */
-    public function setFile(?string $file): FileInterface;
+    public function setFile($file): FileInterface;
 
     /**
      * getUrl
@@ -41,7 +41,7 @@ interface FileInterface extends MediaObjectInterface
      *
      * @param string|null $url
      *
-     * @return FileInterface|self
+     * @return FileInterface
      */
     public function setUrl(?string $url): FileInterface;
 }

@@ -12,7 +12,7 @@ use PhpGuild\MediaObjectBundle\Annotation as MediaObject;
 trait FilePropertiesTrait
 {
     /**
-     * @var string|null
+     * @var mixed|null
      * @MediaObject\Uploadable(urlProperty="url")
      */
     protected $file;

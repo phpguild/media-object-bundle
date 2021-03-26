@@ -2,26 +2,23 @@
 
 declare(strict_types=1);
 
-namespace PhpGuild\MediaObjectBundle\EventSubscriber;
+namespace PhpGuild\MediaObjectBundle\Service;
 
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\ORM\Events;
 use Doctrine\ORM\Mapping\Column;
-use Doctrine\Common\EventSubscriber;
 use PhpGuild\MediaObjectBundle\Annotation\Uploadable;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
 use PhpGuild\MediaObjectBundle\Upload\FileUploader;
 use Symfony\Component\HttpFoundation\File\File;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
 /**
- * Class ResolveMediaObjectSubscriber
+ * Class ResolveMediaObject
  */
-final class ResolveMediaObjectSubscriber implements EventSubscriber
+final class ResolveMediaObject
 {
     /** @var EntityManagerInterface $entityManager */
     private $entityManager;
@@ -32,11 +29,11 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
     /** @var PropertyAccessorInterface $propertyAccessor */
     private $propertyAccessor;
 
-    /** @var FileUploader $fileUploader */
-    private $fileUploader;
-
     /** @var UrlGeneratorInterface $urlGenerator */
     private $urlGenerator;
+
+    /** @var FileUploader $fileUploader */
+    private $fileUploader;
 
     /**
      * ResolveMediaObjectSubscriber constructor.
@@ -44,113 +41,71 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
      * @param EntityManagerInterface    $entityManager
      * @param Reader                    $annotationReader
      * @param PropertyAccessorInterface $propertyAccessor
-     * @param FileUploader              $fileUploader
      * @param UrlGeneratorInterface     $urlGenerator
+     * @param FileUploader              $fileUploader
      */
     public function __construct(
         EntityManagerInterface $entityManager,
         Reader $annotationReader,
         PropertyAccessorInterface $propertyAccessor,
-        FileUploader $fileUploader,
-        UrlGeneratorInterface $urlGenerator
+        UrlGeneratorInterface $urlGenerator,
+        FileUploader $fileUploader
     ) {
         $this->entityManager = $entityManager;
         $this->annotationReader = $annotationReader;
         $this->propertyAccessor = $propertyAccessor;
-        $this->fileUploader = $fileUploader;
         $this->urlGenerator = $urlGenerator;
+        $this->fileUploader = $fileUploader;
     }
 
     /**
-     * getSubscribedEvents
+     * resolve
      *
-     * @return array
-     */
-    public function getSubscribedEvents(): array
-    {
-        return [
-            Events::postLoad,
-            Events::prePersist,
-            Events::preUpdate,
-        ];
-    }
-
-    /**
-     * postLoad
+     * @param MediaObjectInterface $entity
      *
-     * @param LifecycleEventArgs $args
+     * @throws ExceptionInterface
      */
-    public function postLoad(LifecycleEventArgs $args): void
+    public function resolve(MediaObjectInterface $entity): void
     {
-        $entity = $args->getObject();
-
-        if (!$entity instanceof MediaObjectInterface) {
-            return;
-        }
-
         /**
          * @var \ReflectionProperty $property
          * @var bool $isCollection
          * @var Uploadable $uploadable
          */
         foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
-            $context = $this->urlGenerator->getContext();
             $value = $this->propertyAccessor->getValue($entity, $property->name);
-
-            if (
-                0 !== strncmp('http://', $value, 7)
-                && 0 !== strncmp('https://', $value, 8)
-            ) {
-                $value = $context->getScheme() . '://' . $context->getHost() .
-                    ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
-                    ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
-                    $this->fileUploader->getRelativeFile($value)
-                ;
+            if (!$value) {
+                continue;
             }
 
-            $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $value);
+            if (true === $isCollection) {
+                if (!\is_array($value)) {
+                    continue;
+                }
+
+                $files = [];
+                foreach ($value as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $files[] = $this->fileUploader->prepare($file);
+                }
+
+                $this->propertyAccessor->setValue($entity, $property->name, $files);
+                continue;
+            }
+
+            $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->prepare($value));
         }
     }
 
     /**
-     * prePersist
-     *
-     * @param LifecycleEventArgs $args
-     */
-    public function prePersist(LifecycleEventArgs $args): void
-    {
-        $entity = $args->getObject();
-
-        if (!$entity instanceof MediaObjectInterface) {
-            return;
-        }
-
-        $this->resolveObject($entity);
-    }
-
-    /**
-     * preUpdate
-     *
-     * @param LifecycleEventArgs $args
-     */
-    public function preUpdate(LifecycleEventArgs $args): void
-    {
-        $entity = $args->getObject();
-
-        if (!$entity instanceof MediaObjectInterface) {
-            return;
-        }
-
-        $this->resolveObject($entity, $args->getEntityChangeSet());
-    }
-
-    /**
-     * resolveObject
+     * persist
      *
      * @param MediaObjectInterface $entity
-     * @param array             $changeSet
+     * @param array                $changeSet
      */
-    public function resolveObject(MediaObjectInterface $entity, array $changeSet = []): void
+    public function persist(MediaObjectInterface $entity, array $changeSet = []): void
     {
         /**
          * @var \ReflectionProperty $property
@@ -172,11 +127,12 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
                 }
 
                 $files = [];
+                /** @var File $file */
                 foreach ($value as $file) {
                     if (!$file) {
                         continue;
                     }
-                    $files[] = $this->prepareUploadFile($file);
+                    $files[] = $this->fileUploader->copy($file);
                 }
 
                 $this->propertyAccessor->setValue($entity, $property->name, $files);
@@ -185,19 +141,50 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
                     if (!$prevFile) {
                         continue;
                     }
-                    $this->fileUploader->deleteFile($prevFile);
+                    $this->fileUploader->delete($prevFile);
                 }
             } else {
                 if (!$value) {
                     continue;
                 }
 
-                $this->propertyAccessor->setValue($entity, $property->name, $this->prepareUploadFile($value));
+                $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->copy($value));
 
                 if ($prevValue) {
-                    $this->fileUploader->deleteFile($prevValue);
+                    $this->fileUploader->delete($prevValue);
                 }
             }
+        }
+    }
+
+    /**
+     * prepare
+     *
+     * @param MediaObjectInterface $entity
+     */
+    public function prepare(MediaObjectInterface $entity): void
+    {
+        /**
+         * @var \ReflectionProperty $property
+         * @var bool $isCollection
+         * @var Uploadable $uploadable
+         */
+        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+            $context = $this->urlGenerator->getContext();
+            $value = $this->propertyAccessor->getValue($entity, $property->name);
+
+            if (
+                0 !== strncmp('http://', $value, 7)
+                && 0 !== strncmp('https://', $value, 8)
+            ) {
+                $value = $context->getScheme() . '://' . $context->getHost() .
+                    ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
+                    ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
+                    $this->fileUploader->getRelativeFile($value)
+                ;
+            }
+
+            $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $value);
         }
     }
 
@@ -237,30 +224,5 @@ final class ResolveMediaObjectSubscriber implements EventSubscriber
         }
 
         return $propertyList;
-    }
-
-
-    /**
-     * prepareUploadFile
-     *
-     * @param mixed $file
-     *
-     * @return string|null
-     */
-    protected function prepareUploadFile($file): ?string
-    {
-        if (\is_string($file) && 0 === strncmp($file, 'data:', 5)) {
-            return $this->fileUploader->copyFromBase64($file);
-        }
-
-        if ($file instanceof UploadedFile) {
-            return $this->fileUploader->copyFromFile($file);
-        }
-
-        if ($file instanceof File) {
-            return $file->getFilename();
-        }
-
-        return $file;
     }
 }

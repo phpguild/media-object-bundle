@@ -12,9 +12,9 @@ trait FileMethodsTrait
     /**
      * getFile
      *
-     * @return string|null
+     * @return mixed|null
      */
-    public function getFile(): ?string
+    public function getFile()
     {
         return $this->file;
     }
@@ -22,11 +22,11 @@ trait FileMethodsTrait
     /**
      * setFile
      *
-     * @param string|null $file
+     * @param mixed|null $file
      *
      * @return FileInterface|self
      */
-    public function setFile(?string $file): FileInterface
+    public function setFile($file): FileInterface
     {
         $this->file = $file;
 

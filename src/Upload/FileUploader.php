@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace PhpGuild\MediaObjectBundle\Upload;
 
+use PhpGuild\MediaObjectBundle\Serializer\Base64DataUriNormalizer;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
-use Symfony\Component\Mime\MimeTypes;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
 /**
  * Class FileUploader
@@ -32,74 +33,68 @@ class FileUploader
     }
 
     /**
-     * copyFromBase64
+     * prepareUploadFile
      *
-     * @param string|null $file
+     * @param $file
      *
-     * @return string|null
+     * @return File|null
+     *
+     * @throws ExceptionInterface
      */
-    public function copyFromBase64(?string $file): ?string
+    public function prepare($file): ?File
     {
-        if (!$file) {
-            return null;
+        if (\is_string($file) && 0 === strncmp($file, 'data:', 5)) {
+            return $this->denormalizeBase64($file);
         }
 
-        [ $mimeType, $data ] = explode(',', $file, 2);
-        [ $mimeType, $dataType ] = explode(';', $mimeType, 2);
-        [ $dataPrefix, $mimeType ] = explode(':', $mimeType, 2);
-
-        if ('base64' !== $dataType) {
-            return null;
-        }
-
-        $data = base64_decode($data);
-        $mimeType = str_replace([ 'image/jpg' ], [ 'image/jpeg' ], $mimeType);
-
-        $extension = (new MimeTypes())->getExtensions($mimeType)[0] ?? null;
-        if (!$extension) {
-            return null;
-        }
-
-        $fileName = $this->generateRandomFileName() . '.' . $extension;
-        $filePath = $this->getAbsoluteFile($fileName);
-        $directory = \dirname($filePath);
-
-        if (!\is_dir($directory)) {
-            mkdir($directory, 0775, true);
-        }
-
-        file_put_contents($filePath, $data);
-
-        return $fileName;
+        return $file instanceof File ? $file : null;
     }
 
     /**
-     * copyFromFile
+     * denormalizeBase64
      *
-     * @param File|null $file
+     * @param string|null $data
+     *
+     * @return File|null
+     *
+     * @throws ExceptionInterface
+     */
+    public function denormalizeBase64(?string $data): ?File
+    {
+        if (!$data) {
+            return null;
+        }
+
+        return (new Base64DataUriNormalizer())->denormalize($data, File::class);
+    }
+
+    /**
+     * copy
+     *
+     * @param File $file
      *
      * @return string|null
      */
-    public function copyFromFile(?File $file): ?string
+    public function copy(File $file): ?string
     {
         if (!$file) {
             return null;
         }
 
         $fileName = $this->generateRandomFileName() . '.' . $file->guessExtension();
-        $file->move(\dirname($this->getAbsolutePath($fileName)), $fileName);
-        
+        $file->move($this->getAbsolutePath($fileName), $fileName);
+
         return $fileName;
     }
 
     /**
-     * deleteFile
+     * delete
      *
      * @param string $fileName
      *
      * @return bool
      */
-    public function deleteFile(string $fileName): bool
+    public function delete(string $fileName): bool
     {
         $file = $this->getAbsolutePath($fileName);
 
@@ -129,7 +124,7 @@ class FileUploader
     {
         return $this->getRelativePath($fileName) . '/' . $fileName;
     }
-    
+
     /**
      * getAbsolutePath
      *
