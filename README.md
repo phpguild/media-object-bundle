@@ -1,10 +1,16 @@
 # Symfony Media Object Bundle
 
+## Features
+- Api Platform support
+- Base64 file normalization
+- URL file normalization
+
 ## Installation
 
 Install with composer
 
     composer req phpguild/media-object-bundle
+
 
 ## Configuration
 
@@ -40,3 +46,10 @@ With predefined trait
     class Photo implements FileInterface
     {
         use FileTrait;
+
+## API Platform Bridge
+
+Add into `config/services.yaml`
+
+    imports:
+        - { resource: '@PhpGuildMediaObjectBundle/Resources/config/bridge/api-platform.yaml' }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PhpGuild\MediaObjectBundle\EventSubscriber;
 
 use Doctrine\ORM\Event\LifecycleEventArgs;
+use Doctrine\ORM\Event\OnFlushEventArgs;
+use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Events;
 use Doctrine\Common\EventSubscriber;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
@@ -37,8 +39,8 @@ final class MediaObjectSubscriber implements EventSubscriber
     {
         return [
             Events::postLoad,
-            Events::prePersist,
-            Events::preUpdate,
+            Events::onFlush,
+            Events::postFlush,
         ];
     }
 
@@ -55,38 +57,60 @@ final class MediaObjectSubscriber implements EventSubscriber
             return;
         }
 
-        $this->resolveMediaObject->prepare($entity);
+        $this->resolveMediaObject->load($entity);
     }
 
     /**
-     * prePersist
+     * onFlush
      *
-     * @param LifecycleEventArgs $eventArgs
+     * @param OnFlushEventArgs $eventArgs
      */
-    public function prePersist(LifecycleEventArgs $eventArgs): void
+    public function onFlush(OnFlushEventArgs $eventArgs): void
     {
-        $entity = $eventArgs->getObject();
+        $entityManager = $eventArgs->getEntityManager();
+        $unitOfWork = $entityManager->getUnitOfWork();
 
-        if (!$entity instanceof MediaObjectInterface) {
-            return;
+        foreach ($unitOfWork->getScheduledEntityInsertions() as $entity) {
+            if (!$entity instanceof MediaObjectInterface) {
+                continue;
+            }
+
+            if ($this->resolveMediaObject->persist($entity)) {
+                $meta = $entityManager->getClassMetadata(\get_class($entity));
+                $unitOfWork->recomputeSingleEntityChangeSet($meta, $entity);
+            }
         }
 
-        $this->resolveMediaObject->persist($entity);
+        foreach ($unitOfWork->getScheduledEntityUpdates() as $entity) {
+            if (!$entity instanceof MediaObjectInterface) {
+                continue;
+            }
+
+            if ($this->resolveMediaObject->persist($entity, $unitOfWork->getEntityChangeSet($entity))) {
+                $meta = $entityManager->getClassMetadata(\get_class($entity));
+                $unitOfWork->recomputeSingleEntityChangeSet($meta, $entity);
+            }
+        }
     }
 
     /**
-     * preUpdate
+     * postFlush
      *
-     * @param LifecycleEventArgs $eventArgs
+     * @param PostFlushEventArgs $eventArgs
      */
-    public function preUpdate(LifecycleEventArgs $eventArgs): void
+    public function postFlush(PostFlushEventArgs $eventArgs): void
     {
-        $entity = $eventArgs->getObject();
+        $entityManager = $eventArgs->getEntityManager();
+        $unitOfWork = $entityManager->getUnitOfWork();
 
-        if (!$entity instanceof MediaObjectInterface) {
-            return;
+        foreach ($unitOfWork->getIdentityMap() as $entities) {
+            foreach ($entities as $entity) {
+                if (!$entity instanceof MediaObjectInterface) {
+                    continue;
+                }
+
+                $this->resolveMediaObject->load($entity);
+            }
         }
-
-        $this->resolveMediaObject->persist($entity, $eventArgs->getEntityChangeSet());
     }
 }

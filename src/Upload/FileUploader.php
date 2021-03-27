@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpGuild\MediaObjectBundle\Upload;
 
 use PhpGuild\MediaObjectBundle\Serializer\Base64DataUriNormalizer;
+use PhpGuild\MediaObjectBundle\Serializer\HttpUriNormalizer;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -35,7 +36,7 @@ class FileUploader
     /**
      * prepareUploadFile
      *
-     * @param $file
+     * @param mixed $file
      *
      * @return File|null
      *
@@ -43,29 +44,23 @@ class FileUploader
      */
     public function prepare($file): ?File
     {
-        if (\is_string($file) && 0 === strncmp($file, 'data:', 5)) {
-            return $this->denormalizeBase64($file);
+        if ($file) {
+            if ($file instanceof File) {
+                return $file;
+            }
+
+            $file = (new Base64DataUriNormalizer())->denormalize($file, File::class);
+            if ($file instanceof File) {
+                return $file;
+            }
+
+            $file = (new HttpUriNormalizer())->denormalize($file, File::class);
+            if ($file instanceof File) {
+                return $file;
+            }
         }
 
-        return $file instanceof File ? $file : null;
-    }
-
-    /**
-     * denormalizeBase64
-     *
-     * @param string|null $data
-     *
-     * @return File|null
-     *
-     * @throws ExceptionInterface
-     */
-    public function denormalizeBase64(?string $data): ?File
-    {
-        if (!$data) {
-            return null;
-        }
-
-        return (new Base64DataUriNormalizer())->denormalize($data, File::class);
+        return null;
     }
 
     /**

@@ -5,14 +5,10 @@ services:
 
   PhpGuild\MediaObjectBundle\:
     resource: '../../*'
-    exclude: '../../{DependencyInjection,Resources,PhpGuildMediaObjectBundle.php}'
+    exclude: '../../{DependencyInjection,Bridge,Resources,PhpGuildMediaObjectBundle.php}'
 
   PhpGuild\MediaObjectBundle\EventSubscriber\MediaObjectSubscriber:
     tags: [ doctrine.event_subscriber ]
 
   PhpGuild\MediaObjectBundle\EventSubscriber\FileMetadataSubscriber:
     tags: [ doctrine.event_subscriber ]
-
-  PhpGuild\MediaObjectBundle\Serializer\FileNormalizer:
-    tags: [ serializer.denormalizer, serializer.normalizer ]
-

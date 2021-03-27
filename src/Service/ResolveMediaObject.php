@@ -59,6 +59,48 @@ final class ResolveMediaObject
     }
 
     /**
+     * load
+     *
+     * @param MediaObjectInterface $entity
+     */
+    public function load(MediaObjectInterface $entity): void
+    {
+        /**
+         * @var \ReflectionProperty $property
+         * @var bool $isCollection
+         * @var Uploadable $uploadable
+         */
+        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+            $file = $this->propertyAccessor->getValue($entity, $property->name);
+            if (!$file) {
+                continue;
+            }
+
+            if (!$file instanceof File) {
+                $file = new File($this->fileUploader->getAbsoluteFile($file));
+                $this->propertyAccessor->setValue($entity, $property->name, $file);
+            }
+
+            $context = $this->urlGenerator->getContext();
+            $url = $context->getScheme() . '://' . $context->getHost() .
+                (
+                    'http' === $context->getScheme() && 80 !== $context->getHttpPort()
+                        ? ':' . $context->getHttpPort()
+                        : ''
+                ) .
+                (
+                    'https' === $context->getScheme() && 443 !== $context->getHttpsPort()
+                        ? ':' . $context->getHttpsPort()
+                        : ''
+                ) .
+                $this->fileUploader->getRelativeFile($file->getFilename())
+            ;
+
+            $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $url);
+        }
+    }
+
+    /**
      * resolve
      *
      * @param MediaObjectInterface $entity
@@ -74,7 +116,7 @@ final class ResolveMediaObject
          */
         foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
             $value = $this->propertyAccessor->getValue($entity, $property->name);
-            if (!$value) {
+            if (null === $value) {
                 continue;
             }
 
@@ -104,22 +146,25 @@ final class ResolveMediaObject
      *
      * @param MediaObjectInterface $entity
      * @param array                $changeSet
+     *
+     * @return bool
+     *
+     * @throws ExceptionInterface
      */
-    public function persist(MediaObjectInterface $entity, array $changeSet = []): void
+    public function persist(MediaObjectInterface $entity, array $changeSet = []): bool
     {
+        $recompute = false;
+
+        $this->resolve($entity);
+
         /**
          * @var \ReflectionProperty $property
          * @var bool $isCollection
          * @var Uploadable $uploadable
          */
         foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+            $prevFilename = $changeSet[$property->name][0] ?? null;
             $value = $this->propertyAccessor->getValue($entity, $property->name);
-            $prevValue = $changeSet[$property->name][0] ?? null;
-
-            if ($prevValue && !$value) {
-                $this->propertyAccessor->setValue($entity, $property->name, $prevValue);
-                continue;
-            }
 
             if (true === $isCollection) {
                 if (!\is_array($value)) {
@@ -129,63 +174,46 @@ final class ResolveMediaObject
                 $files = [];
                 /** @var File $file */
                 foreach ($value as $file) {
-                    if (!$file) {
+                    if (!$file instanceof File) {
                         continue;
                     }
                     $files[] = $this->fileUploader->copy($file);
                 }
 
                 $this->propertyAccessor->setValue($entity, $property->name, $files);
+                $recompute = true;
 
-                foreach ($prevValue ?? [] as $prevFile) {
+                foreach ($prevFilename ?? [] as $prevFile) {
                     if (!$prevFile) {
                         continue;
                     }
                     $this->fileUploader->delete($prevFile);
                 }
-            } else {
-                if (!$value) {
-                    continue;
-                }
-
-                $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->copy($value));
-
-                if ($prevValue) {
-                    $this->fileUploader->delete($prevValue);
-                }
-            }
-        }
-    }
-
-    /**
-     * prepare
-     *
-     * @param MediaObjectInterface $entity
-     */
-    public function prepare(MediaObjectInterface $entity): void
-    {
-        /**
-         * @var \ReflectionProperty $property
-         * @var bool $isCollection
-         * @var Uploadable $uploadable
-         */
-        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
-            $context = $this->urlGenerator->getContext();
-            $value = $this->propertyAccessor->getValue($entity, $property->name);
-
-            if (
-                0 !== strncmp('http://', $value, 7)
-                && 0 !== strncmp('https://', $value, 8)
-            ) {
-                $value = $context->getScheme() . '://' . $context->getHost() .
-                    ('http' === $context->getScheme() && 80 !== $context->getHttpPort() ? ':' . $context->getHttpPort() : '') .
-                    ('https' === $context->getScheme() && 443 !== $context->getHttpsPort() ? ':' . $context->getHttpsPort() : '') .
-                    $this->fileUploader->getRelativeFile($value)
-                ;
+                continue;
             }
 
-            $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $value);
+            if (!$value instanceof File) {
+                $this->propertyAccessor->setValue($entity, $property->name, $prevFilename);
+                $recompute = true;
+                continue;
+            }
+
+            $filename = $value->getFilename();
+            if ($filename === $prevFilename) {
+                $this->propertyAccessor->setValue($entity, $property->name, $filename);
+                $recompute = true;
+                continue;
+            }
+
+            $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->copy($value));
+            $recompute = true;
+
+            if ($prevFilename) {
+                $this->fileUploader->delete($prevFilename);
+            }
         }
+
+        return $recompute;
     }
 
     /**

@@ -20,6 +20,10 @@ class Base64DataUriNormalizer extends DataUriNormalizer
      */
     public function denormalize($data, string $type, string $format = null, array $context = [])
     {
+        if (0 !== strncmp((string) $data, 'data:', 5)) {
+            return $data;
+        }
+
         parent::denormalize($data, $type, $format, $context);
 
         $match = [];
@@ -39,14 +43,21 @@ class Base64DataUriNormalizer extends DataUriNormalizer
             $match['mimeType'] = 'image/jpeg';
         }
 
-        $extension = (new MimeTypes())->getExtensions($match['mimeType'])[0] ?? null;
-        if (!$extension) {
-            throw new NotNormalizableValueException('The extension is invalid.');
+        $filesystem = new Filesystem();
+        $tempfile = $filesystem->tempnam('/tmp', 'symfony');
+        $filesystem->dumpFile($tempfile, \base64_decode($match['encoded']));
+
+        $mimeType = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $tempfile);
+        if ($match['mimeType'] !== $mimeType) {
+            $filesystem->remove($tempfile);
+            throw new NotNormalizableValueException('The MimeType is invalid.');
         }
 
-        $filesystem = new Filesystem();
-        $tempfile = sprintf('%s.%s', $filesystem->tempnam('/tmp', 'symfony'), $extension);
-        $filesystem->dumpFile($tempfile, \base64_decode($match['encoded']));
+        $extension = (new MimeTypes())->getExtensions($mimeType)[0] ?? null;
+        if (!$extension) {
+            $filesystem->remove($tempfile);
+            throw new NotNormalizableValueException('The extension is invalid.');
+        }
 
         return new File($tempfile);
     }

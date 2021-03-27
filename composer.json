@@ -11,8 +11,10 @@
     }
   ],
   "require": {
+    "ext-fileinfo": "*",
     "php": ">=7.1",
     "phpguild/doctrine-extra-bundle": "^1.0",
+    "mashape/unirest-php": "^3.0",
     "symfony/property-access": "*",
     "symfony/serializer": "*",
     "symfony/mime": "*"

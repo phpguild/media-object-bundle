@@ -1,0 +1,10 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  PhpGuild\MediaObjectBundle\Bridge\ApiPlatform\:
+    resource: '../../../Bridge/ApiPlatform/*'
+
+  ApiPlatform\Core\Serializer\ItemNormalizer:
+    alias: api_platform.serializer.normalizer.item
