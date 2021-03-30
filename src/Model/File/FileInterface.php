@@ -11,7 +11,7 @@ use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
  */
 interface FileInterface extends MediaObjectInterface
 {
-    public const COLUMN_NAME = 'file';
+    public const FILE_COLUMN_NAME = 'file';
 
     /**
      * getFile

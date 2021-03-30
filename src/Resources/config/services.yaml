@@ -11,4 +11,5 @@ services:
     tags: [ doctrine.event_subscriber ]
 
   PhpGuild\MediaObjectBundle\EventSubscriber\FileMetadataSubscriber:
-    tags: [ doctrine.event_subscriber ]
+    tags:
+      - { name: doctrine.event_subscriber, priority: 256 }

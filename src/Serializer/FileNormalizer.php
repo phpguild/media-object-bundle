@@ -6,9 +6,7 @@ namespace PhpGuild\MediaObjectBundle\Serializer;
 
 use PhpGuild\MediaObjectBundle\Model\File\FileInterface;
 use PhpGuild\MediaObjectBundle\Service\ResolveMediaObject;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\ContextAwareDenormalizerInterface;
-use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
 /**

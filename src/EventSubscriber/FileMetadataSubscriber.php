@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpGuild\MediaObjectBundle\EventSubscriber;
 
 use Doctrine\Common\EventSubscriber;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 use Doctrine\ORM\Events;
 use Doctrine\ORM\Mapping\MappingException;
@@ -45,10 +46,10 @@ final class FileMetadataSubscriber implements EventSubscriber
         }
 
         $classMetadata->mapField([
-            'nullable' => false,
-            'type' => 'string',
-            'fieldName' => FileInterface::COLUMN_NAME,
-            'columnName' => FileInterface::COLUMN_NAME,
+            'nullable' => true,
+            'type' => Types::STRING,
+            'fieldName' => FileInterface::FILE_COLUMN_NAME,
+            'columnName' => FileInterface::FILE_COLUMN_NAME,
         ]);
     }
 }

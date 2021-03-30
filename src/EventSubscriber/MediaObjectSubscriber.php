@@ -11,6 +11,7 @@ use Doctrine\ORM\Events;
 use Doctrine\Common\EventSubscriber;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
 use PhpGuild\MediaObjectBundle\Service\ResolveMediaObject;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
 /**
  * Class MediaObjectSubscriber
@@ -64,6 +65,8 @@ final class MediaObjectSubscriber implements EventSubscriber
      * onFlush
      *
      * @param OnFlushEventArgs $eventArgs
+     *
+     * @throws ExceptionInterface
      */
     public function onFlush(OnFlushEventArgs $eventArgs): void
     {
