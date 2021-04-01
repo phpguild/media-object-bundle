@@ -13,10 +13,10 @@ trait FilePropertiesTrait
 {
     /**
      * @var mixed|null $file
-     * @MediaObject\Uploadable(urlProperty="url")
+     * @MediaObject\Uploadable(urlProperty="fileUrl")
      */
     protected $file;
 
-    /** @var string|null $url */
-    protected $url;
+    /** @var string|null $fileUrl */
+    protected $fileUrl;
 }

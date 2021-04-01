@@ -30,18 +30,18 @@ interface FileInterface extends MediaObjectInterface
     public function setFile($file): FileInterface;
 
     /**
-     * getUrl
+     * getFileUrl
      *
      * @return string|null
      */
-    public function getUrl(): ?string;
+    public function getFileUrl(): ?string;
 
     /**
-     * setUrl
+     * setFileUrl
      *
-     * @param string|null $url
+     * @param string|null $fileUrl
      *
      * @return FileInterface
      */
-    public function setUrl(?string $url): FileInterface;
+    public function setFileUrl(?string $fileUrl): FileInterface;
 }

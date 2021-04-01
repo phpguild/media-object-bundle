@@ -34,25 +34,25 @@ trait FileMethodsTrait
     }
 
     /**
-     * getUrl
+     * getFileUrl
      *
      * @return string|null
      */
-    public function getUrl(): ?string
+    public function getFileUrl(): ?string
     {
-        return $this->url;
+        return $this->fileUrl;
     }
 
     /**
-     * setUrl
+     * setFileUrl
      *
-     * @param string|null $url
+     * @param string|null $fileUrl
      *
-     * @return FileInterface|self
+     * @return FileInterface
      */
-    public function setUrl(?string $url): FileInterface
+    public function setFileUrl(?string $fileUrl): FileInterface
     {
-        $this->url = $url;
+        $this->fileUrl = $fileUrl;
 
         return $this;
     }
