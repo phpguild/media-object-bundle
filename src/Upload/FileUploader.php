@@ -93,7 +93,7 @@ class FileUploader
     {
         $file = $this->getAbsolutePath($fileName);
 
-        return file_exists($file) && unlink($file);
+        return file_exists($file) && is_file($file) && unlink($file);
     }
 
     /**
