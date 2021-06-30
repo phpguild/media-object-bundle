@@ -15,6 +15,9 @@ class Uploadable
     /** @var string $default */
     private $default = 'default.png';
 
+    /** @var string $filter */
+    private $filter = 'original';
+
     /** @var string $urlProperty */
     private $urlProperty;
 
@@ -26,6 +29,7 @@ class Uploadable
     public function __construct(array $data)
     {
         $this->default = $data['default'] ?? $this->default;
+        $this->filter = $data['filter'] ?? $this->filter;
         $this->urlProperty = $data['urlProperty'] ?? $this->urlProperty;
     }
 
@@ -37,6 +41,16 @@ class Uploadable
     public function getDefault(): ?string
     {
         return $this->default;
+    }
+
+    /**
+     * getFilter
+     *
+     * @return string|null
+     */
+    public function getFilter(): ?string
+    {
+        return $this->filter;
     }
 
     /**

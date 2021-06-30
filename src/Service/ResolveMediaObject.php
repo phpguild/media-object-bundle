@@ -7,12 +7,15 @@ namespace PhpGuild\MediaObjectBundle\Service;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\Column;
+use Liip\ImagineBundle\Config\FilterInterface;
+use Liip\ImagineBundle\Imagine\Cache\CacheManager;
+use Liip\ImagineBundle\Imagine\Cache\CacheManagerAwareInterface;
+use Liip\ImagineBundle\Imagine\Filter\FilterManager;
 use PhpGuild\MediaObjectBundle\Annotation\Uploadable;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
 use PhpGuild\MediaObjectBundle\Upload\FileUploader;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 
 /**
@@ -29,9 +32,6 @@ final class ResolveMediaObject
     /** @var PropertyAccessorInterface $propertyAccessor */
     private $propertyAccessor;
 
-    /** @var UrlGeneratorInterface $urlGenerator */
-    private $urlGenerator;
-
     /** @var FileUploader $fileUploader */
     private $fileUploader;
 
@@ -41,21 +41,20 @@ final class ResolveMediaObject
      * @param EntityManagerInterface    $entityManager
      * @param Reader                    $annotationReader
      * @param PropertyAccessorInterface $propertyAccessor
-     * @param UrlGeneratorInterface     $urlGenerator
      * @param FileUploader              $fileUploader
      */
     public function __construct(
         EntityManagerInterface $entityManager,
         Reader $annotationReader,
         PropertyAccessorInterface $propertyAccessor,
-        UrlGeneratorInterface $urlGenerator,
-        FileUploader $fileUploader
+        FileUploader $fileUploader,
+        CacheManager $cacheManager
     ) {
         $this->entityManager = $entityManager;
         $this->annotationReader = $annotationReader;
         $this->propertyAccessor = $propertyAccessor;
-        $this->urlGenerator = $urlGenerator;
         $this->fileUploader = $fileUploader;
+        $this->cacheManager = $cacheManager;
     }
 
     /**
@@ -81,20 +80,10 @@ final class ResolveMediaObject
                 $this->propertyAccessor->setValue($entity, $property->name, $file);
             }
 
-            $context = $this->urlGenerator->getContext();
-            $url = $context->getScheme() . '://' . $context->getHost() .
-                (
-                    'http' === $context->getScheme() && 80 !== $context->getHttpPort()
-                        ? ':' . $context->getHttpPort()
-                        : ''
-                ) .
-                (
-                    'https' === $context->getScheme() && 443 !== $context->getHttpsPort()
-                        ? ':' . $context->getHttpsPort()
-                        : ''
-                ) .
-                $this->fileUploader->getRelativeFile($file->getFilename())
-            ;
+            $url = $this->cacheManager->getBrowserPath(
+                $this->fileUploader->getChunkedFileName($file->getFilename()) . '/' . $file->getFilename(),
+                $uploadable->getFilter()
+            );
 
             $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $url);
         }

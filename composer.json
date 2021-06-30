@@ -12,7 +12,8 @@
   ],
   "require": {
     "ext-fileinfo": "*",
-    "php": ">=7.1",
+    "php": ">=7.2",
+    "liip/imagine-bundle": "^2.6",
     "phpguild/doctrine-extra-bundle": "^1.0",
     "mashape/unirest-php": "^3.0",
     "symfony/property-access": "*",

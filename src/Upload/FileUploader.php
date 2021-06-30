@@ -145,6 +145,18 @@ class FileUploader
     }
 
     /**
+     * getChunkedFileName
+     *
+     * @param string $fileName
+     *
+     * @return string
+     */
+    public function getChunkedFileName(string $fileName): string
+    {
+        return ltrim($this->getChunkedDirectoryPart($fileName), '/');
+    }
+
+    /**
      * generateRandomFileName
      *
      * @return string
@@ -152,18 +164,6 @@ class FileUploader
     private function generateRandomFileName(): string
     {
         return hash('sha1', uniqid((string) microtime(true), true));
-    }
-
-    /**
-     * getChunkedFileName
-     *
-     * @param string $fileName
-     *
-     * @return string
-     */
-    private function getChunkedFileName(string $fileName): string
-    {
-        return ltrim($this->getChunkedDirectoryPart($fileName), '/');
     }
 
     /**
