@@ -7,13 +7,11 @@ namespace PhpGuild\MediaObjectBundle\Service;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\Column;
-use Liip\ImagineBundle\Config\FilterInterface;
 use Liip\ImagineBundle\Imagine\Cache\CacheManager;
-use Liip\ImagineBundle\Imagine\Cache\CacheManagerAwareInterface;
-use Liip\ImagineBundle\Imagine\Filter\FilterManager;
 use PhpGuild\MediaObjectBundle\Annotation\Uploadable;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
 use PhpGuild\MediaObjectBundle\Upload\FileUploader;
+use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -35,13 +33,17 @@ final class ResolveMediaObject
     /** @var FileUploader $fileUploader */
     private $fileUploader;
 
+    /** @var CacheManager $cacheManager */
+    private $cacheManager;
+
     /**
-     * ResolveMediaObjectSubscriber constructor.
+     * ResolveMediaObject constructor.
      *
      * @param EntityManagerInterface    $entityManager
      * @param Reader                    $annotationReader
      * @param PropertyAccessorInterface $propertyAccessor
      * @param FileUploader              $fileUploader
+     * @param CacheManager              $cacheManager
      */
     public function __construct(
         EntityManagerInterface $entityManager,
@@ -76,14 +78,22 @@ final class ResolveMediaObject
             }
 
             if (!$file instanceof File) {
-                $file = new File($this->fileUploader->getAbsoluteFile($file));
+                try {
+                    $file = new File($this->fileUploader->getAbsoluteFile($file));
+                } catch (FileNotFoundException $exception) {
+                    $file = null;
+                }
+
                 $this->propertyAccessor->setValue($entity, $property->name, $file);
             }
 
-            $url = $this->cacheManager->getBrowserPath(
-                $this->fileUploader->getChunkedFileName($file->getFilename()) . '/' . $file->getFilename(),
-                $uploadable->getFilter()
-            );
+            $url = null;
+            if ($file instanceof File) {
+                $url = $this->cacheManager->getBrowserPath(
+                    $this->fileUploader->getChunkedFileName($file->getFilename()) . '/' . $file->getFilename(),
+                    $uploadable->getFilter()
+                );
+            }
 
             $this->propertyAccessor->setValue($entity, $uploadable->getUrlProperty(), $url);
         }
