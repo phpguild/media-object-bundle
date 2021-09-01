@@ -15,10 +15,10 @@ use Symfony\Component\Serializer\Exception\ExceptionInterface;
  */
 class FileUploader
 {
-    /** @var string $publicPath */
+    /** @var string|null $publicPath */
     private $publicPath;
 
-    /** @var string $mediaOriginalDirectory */
+    /** @var string|null $mediaOriginalDirectory */
     private $mediaOriginalDirectory;
 
     /**
@@ -29,8 +29,8 @@ class FileUploader
     public function __construct(ParameterBagInterface $parameterBag)
     {
         $configuration = $parameterBag->get('phpguild_media_object');
-        $this->publicPath = $configuration['public_path'];
-        $this->mediaOriginalDirectory = $configuration['media_original_directory'];
+        $this->publicPath = $configuration['public_path'] ?? null;
+        $this->mediaOriginalDirectory = $configuration['media_original_directory'] ?? null;
     }
 
     /**
@@ -57,6 +57,10 @@ class FileUploader
             $file = (new HttpUriNormalizer())->denormalize($file, File::class);
             if ($file instanceof File) {
                 return $file;
+            }
+
+            if ($this->isValidFilename($file) && $this->existsFilename($file)) {
+                return new File($this->getAbsoluteFile($file));
             }
         }
 
@@ -157,6 +161,31 @@ class FileUploader
     }
 
     /**
+     * getMediaCollection
+     *
+     * @param int $modifiedTime
+     *
+     * @return array
+     */
+    public function getMediaCollection(int $modifiedTime = 3600 * 24): array
+    {
+        $iterator = new \RecursiveDirectoryIterator(
+            sprintf('%s/%s', $this->publicPath, $this->mediaOriginalDirectory)
+        );
+
+        $mediaCollection = [];
+
+        foreach (new \RecursiveIteratorIterator($iterator, \RecursiveIteratorIterator::SELF_FIRST) as $file) {
+            if (!$file->isFile() || $file->getMTime() > time() - $modifiedTime) {
+                continue;
+            }
+            $mediaCollection[] = (string) $file;
+        }
+
+        return $mediaCollection;
+    }
+
+    /**
      * generateRandomFileName
      *
      * @return string
@@ -175,10 +204,34 @@ class FileUploader
      */
     private function getChunkedDirectoryPart(string $fileName): string
     {
-        if (!preg_match('/^[[:xdigit:]]{40}\./', $fileName)) {
+        if (!$this->isValidFilename($fileName)) {
             return '';
         }
 
         return rtrim(chunk_split(substr($fileName, 0, 6), 1, '/'), '/');
+    }
+
+    /**
+     * isValidFilename
+     *
+     * @param mixed $fileName
+     *
+     * @return bool
+     */
+    private function isValidFilename($fileName): bool
+    {
+        return (\is_string($fileName) && preg_match('/^[[:xdigit:]]{40}\.[[:alnum:]]+$/', $fileName));
+    }
+
+    /**
+     * existsFilename
+     *
+     * @param string $fileName
+     *
+     * @return bool
+     */
+    private function existsFilename(string $fileName): bool
+    {
+        return file_exists($this->getAbsoluteFile($fileName));
     }
 }

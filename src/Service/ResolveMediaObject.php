@@ -71,7 +71,7 @@ final class ResolveMediaObject
          * @var bool $isCollection
          * @var Uploadable $uploadable
          */
-        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+        foreach ($this->getEntityProperies(\get_class($entity)) as [ $property, $isCollection, $uploadable ]) {
             $file = $this->propertyAccessor->getValue($entity, $property->name);
             if (!$file) {
                 continue;
@@ -113,7 +113,7 @@ final class ResolveMediaObject
          * @var bool $isCollection
          * @var Uploadable $uploadable
          */
-        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+        foreach ($this->getEntityProperies(\get_class($entity)) as [ $property, $isCollection, $uploadable ]) {
             $value = $this->propertyAccessor->getValue($entity, $property->name);
             if (null === $value) {
                 continue;
@@ -161,7 +161,7 @@ final class ResolveMediaObject
          * @var bool $isCollection
          * @var Uploadable $uploadable
          */
-        foreach ($this->getEntityProperies($entity) as [ $property, $isCollection, $uploadable ]) {
+        foreach ($this->getEntityProperies(\get_class($entity)) as [ $property, $isCollection, $uploadable ]) {
             $prevFilename = $changeSet[$property->name][0] ?? null;
             $value = $this->propertyAccessor->getValue($entity, $property->name);
 
@@ -216,16 +216,68 @@ final class ResolveMediaObject
     }
 
     /**
-     * getEntityProperies
-     *
-     * @param MediaObjectInterface $entity
+     * getMediaCollection
      *
      * @return array
      */
-    private function getEntityProperies(MediaObjectInterface $entity): array
+    public function getMediaCollection(): array
+    {
+        $mediaCollection = [];
+        $metadataCollection = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $alias = 'a';
+
+        foreach ($metadataCollection as $metadata) {
+            $className = $metadata->getName();
+            $properties = $this->getEntityProperies($className);
+            if (!\count($properties)) {
+                continue;
+            }
+
+            $fields = [];
+            foreach ($properties as [ $property, $isCollection, $uploadable ]) {
+                $fields[] = $property->getName();
+            }
+
+            $select = implode(', ', array_map(static function (string $field) use ($alias) {
+                return sprintf('%s.%s', $alias, $field);
+            }, $fields));
+
+            $where = implode(' OR ', array_map(static function (string $field) use ($alias) {
+                return sprintf('%s.%s IS NOT NULL', $alias, $field);
+            }, $fields));
+
+            $items = $this->entityManager->createQueryBuilder()
+                ->select($select)
+                ->from($className, $alias)
+                ->where($where)
+                ->getQuery()
+                ->getResult()
+            ;
+
+            foreach ($items as $item) {
+                foreach ($item as $value) {
+                    if (!$value) {
+                        continue;
+                    }
+                    $mediaCollection[] = $this->fileUploader->getAbsoluteFile($value);
+                }
+            }
+        }
+
+        return $mediaCollection;
+    }
+
+    /**
+     * getEntityProperies
+     *
+     * @param string $className
+     *
+     * @return array
+     */
+    private function getEntityProperies(string $className): array
     {
         $propertyList = [];
-        $classMetadata = $this->entityManager->getClassMetadata(\get_class($entity));
+        $classMetadata = $this->entityManager->getClassMetadata($className);
 
         foreach ($classMetadata->getReflectionProperties() as $property) {
             $uploadable = null;
