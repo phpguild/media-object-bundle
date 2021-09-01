@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PhpGuild\MediaObjectBundle\EventSubscriber;
+namespace PhpGuild\MediaObjectBundle\EventSubscriber\DoctrineClassMetadata;
 
 use Doctrine\Common\EventSubscriber;
 use Doctrine\DBAL\Types\Types;
