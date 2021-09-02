@@ -176,7 +176,7 @@ final class ResolveMediaObject
                     if (!$file instanceof File) {
                         continue;
                     }
-                    $files[] = $this->fileUploader->copy($file);
+                    $files[] = $this->fileUploader->copy($file, true);
                 }
 
                 $this->propertyAccessor->setValue($entity, $property->name, $files);
@@ -204,7 +204,7 @@ final class ResolveMediaObject
                 continue;
             }
 
-            $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->copy($value));
+            $this->propertyAccessor->setValue($entity, $property->name, $this->fileUploader->copy($value, true));
             $recompute = true;
 
             if ($prevFilename) {
