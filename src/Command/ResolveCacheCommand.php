@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace PhpGuild\MediaObjectBundle\Command;
 
-use Liip\ImagineBundle\Imagine\Cache\CacheManager;
-use Liip\ImagineBundle\Imagine\Data\DataManager;
-use Liip\ImagineBundle\Imagine\Filter\FilterManager;
+use PhpGuild\MediaObjectBundle\Service\ResolveCache;
 use PhpGuild\MediaObjectBundle\Upload\FileUploader;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,35 +20,23 @@ class ResolveCacheCommand extends Command
     /** @var FileUploader $fileUploader */
     private $fileUploader;
 
-    /** @var FilterManager $filterManager */
-    private $filterManager;
-
-    /** @var DataManager $dataManager */
-    private $dataManager;
-
-    /** @var CacheManager $cacheManager */
-    private $cacheManager;
+    /** @var ResolveCache $resolveCache */
+    private $resolveCache;
 
     /**
      * ResolveCacheCommand constructor.
      *
-     * @param FileUploader       $fileUploader
-     * @param FilterManager      $filterManager
-     * @param DataManager        $dataManager
-     * @param CacheManager       $cacheManager
+     * @param FileUploader $fileUploader
+     * @param ResolveCache $resolveCache
      */
     public function __construct(
         FileUploader $fileUploader,
-        FilterManager $filterManager,
-        DataManager $dataManager,
-        CacheManager $cacheManager,
+        ResolveCache $resolveCache
     ) {
         parent::__construct();
 
         $this->fileUploader = $fileUploader;
-        $this->filterManager = $filterManager;
-        $this->dataManager = $dataManager;
-        $this->cacheManager = $cacheManager;
+        $this->resolveCache = $resolveCache;
     }
 
     /**
@@ -64,24 +50,12 @@ class ResolveCacheCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $filesystemCollection = $this->fileUploader->getMediaCollection();
-        $filters = array_keys($this->filterManager->getFilterConfiguration()->all());
 
         $count = 0;
         foreach ($filesystemCollection as $file) {
             $fileName = basename($file);
             $image = sprintf('%s/%s', $this->fileUploader->getChunkedFileName($fileName), $fileName);
-            foreach ($filters as $filter) {
-                if ($this->cacheManager->isStored($image, $filter)) {
-                    continue;
-                }
-                $this->cacheManager->store(
-                    $this->filterManager->applyFilter($this->dataManager->find($filter, $image), $filter),
-                    $image,
-                    $filter
-                );
-                $this->cacheManager->resolve($image, $filter);
-                $count++;
-            }
+            $count += $this->resolveCache->resolve($image);
         }
 
         $output->writeln(

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace PhpGuild\MediaObjectBundle\Upload;
 
-use Liip\ImagineBundle\Async\ResolveCache;
-use Liip\ImagineBundle\Imagine\Cache\CacheManager;
-use Liip\ImagineBundle\Imagine\Data\DataManager;
-use Liip\ImagineBundle\Imagine\Filter\FilterManager;
 use PhpGuild\MediaObjectBundle\Serializer\Base64DataUriNormalizer;
 use PhpGuild\MediaObjectBundle\Serializer\HttpUriNormalizer;
+use PhpGuild\MediaObjectBundle\Service\ResolveCache;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -19,14 +16,8 @@ use Symfony\Component\Serializer\Exception\ExceptionInterface;
  */
 class FileUploader
 {
-    /** @var FilterManager $filterManager */
-    private $filterManager;
-
-    /** @var DataManager $dataManager */
-    private $dataManager;
-
-    /** @var CacheManager $cacheManager */
-    private $cacheManager;
+    /** @var ResolveCache $resolveCache */
+    private $resolveCache;
 
     /** @var string|null $publicPath */
     private $publicPath;
@@ -37,20 +28,14 @@ class FileUploader
     /**
      * FileUploader constructor.
      *
-     * @param FilterManager         $filterManager
-     * @param DataManager           $dataManager
-     * @param CacheManager          $cacheManager
+     * @param ResolveCache          $resolveCache
      * @param ParameterBagInterface $parameterBag
      */
     public function __construct(
-        FilterManager $filterManager,
-        DataManager $dataManager,
-        CacheManager $cacheManager,
+        ResolveCache $resolveCache,
         ParameterBagInterface $parameterBag
     ) {
-        $this->filterManager = $filterManager;
-        $this->dataManager = $dataManager;
-        $this->cacheManager = $cacheManager;
+        $this->resolveCache = $resolveCache;
 
         $configuration = $parameterBag->get('phpguild_media_object');
         $this->publicPath = $configuration['public_path'] ?? null;
@@ -58,9 +43,9 @@ class FileUploader
     }
 
     /**
-     * prepareUploadFile
+     * prepare
      *
-     * @param mixed $file
+     * @param $file
      *
      * @return File|null
      *
@@ -110,14 +95,7 @@ class FileUploader
 
         if ($resolveCache) {
             $image = sprintf('%s/%s', $this->getChunkedFileName($fileName), $fileName);
-            foreach (array_keys($this->filterManager->getFilterConfiguration()->all()) as $filter) {
-                $this->cacheManager->store(
-                    $this->filterManager->applyFilter($this->dataManager->find($filter, $image), $filter),
-                    $image,
-                    $filter
-                );
-                $this->cacheManager->resolve($image, $filter);
-            }
+            $this->resolveCache->resolve($image);
         }
 
         return $fileName;
