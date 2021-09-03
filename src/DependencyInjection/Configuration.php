@@ -23,6 +23,9 @@ class Configuration implements ConfigurationInterface
 
         $treeBuilder->getRootNode()
             ->children()
+                ->scalarNode('default_filter')
+                    ->isRequired()
+                ->end()
                 ->scalarNode('media_prefix')
                     ->isRequired()
                 ->end()

@@ -16,6 +16,7 @@ Install with composer
 Create file `config/packages/phpguild_media_object.yaml`
 
     phpguild_media_object:
+        default_filter: 'original'
         media_prefix: 'media'
         original_prefix: 'media/original'
         cache_prefix: 'media/cache'

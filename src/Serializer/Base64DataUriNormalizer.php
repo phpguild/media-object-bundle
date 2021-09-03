@@ -39,8 +39,13 @@ class Base64DataUriNormalizer extends DataUriNormalizer
             throw new NotNormalizableValueException('The MimeType should be specified in the URI.');
         }
 
-        if ('image/jpg' === $match['mimeType']) {
-            $match['mimeType'] = 'image/jpeg';
+        switch ($match['mimeType']) {
+            case 'image/jpg':
+                $match['mimeType'] = 'image/jpeg';
+                break;
+            case 'image/heif':
+                $match['mimeType'] = 'image/heic';
+                break;
         }
 
         $filesystem = new Filesystem();
