@@ -6,7 +6,6 @@ namespace PhpGuild\MediaObjectBundle\Upload;
 
 use PhpGuild\MediaObjectBundle\Serializer\Base64DataUriNormalizer;
 use PhpGuild\MediaObjectBundle\Serializer\HttpUriNormalizer;
-use PhpGuild\MediaObjectBundle\Service\ResolveCache;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -16,30 +15,23 @@ use Symfony\Component\Serializer\Exception\ExceptionInterface;
  */
 class FileUploader
 {
-    /** @var ResolveCache $resolveCache */
-    private $resolveCache;
+    /** @var string|null $webRoot */
+    private $webRoot;
 
-    /** @var string|null $publicPath */
-    private $publicPath;
-
-    /** @var string|null $mediaOriginalDirectory */
-    private $mediaOriginalDirectory;
+    /** @var string|null $originalPrefix */
+    private $originalPrefix;
 
     /**
      * FileUploader constructor.
      *
-     * @param ResolveCache          $resolveCache
      * @param ParameterBagInterface $parameterBag
      */
     public function __construct(
-        ResolveCache $resolveCache,
         ParameterBagInterface $parameterBag
     ) {
-        $this->resolveCache = $resolveCache;
-
         $configuration = $parameterBag->get('phpguild_media_object');
-        $this->publicPath = $configuration['public_path'] ?? null;
-        $this->mediaOriginalDirectory = $configuration['media_original_directory'] ?? null;
+        $this->webRoot = $configuration['web_root'] ?? null;
+        $this->originalPrefix = $configuration['original_prefix'] ?? null;
     }
 
     /**
@@ -80,11 +72,10 @@ class FileUploader
      * copy
      *
      * @param File $file
-     * @param bool $resolveCache
      *
      * @return string|null
      */
-    public function copy(File $file, bool $resolveCache = false): ?string
+    public function copy(File $file): ?string
     {
         if (!$file) {
             return null;
@@ -92,11 +83,6 @@ class FileUploader
 
         $fileName = $this->generateRandomFileName() . '.' . $file->guessExtension();
         $file->move($this->getAbsolutePath($fileName), $fileName);
-
-        if ($resolveCache) {
-            $image = sprintf('%s/%s', $this->getChunkedFileName($fileName), $fileName);
-            $this->resolveCache->resolve($image);
-        }
 
         return $fileName;
     }
@@ -148,7 +134,7 @@ class FileUploader
      */
     public function getAbsolutePath(string $fileName): string
     {
-        return $this->publicPath . $this->getRelativePath($fileName);
+        return $this->webRoot . $this->getRelativePath($fileName);
     }
 
     /**
@@ -160,7 +146,7 @@ class FileUploader
      */
     public function getRelativePath(string $fileName): string
     {
-        return '/' . $this->mediaOriginalDirectory . '/' . $this->getChunkedFileName($fileName);
+        return '/' . $this->originalPrefix . '/' . $this->getChunkedFileName($fileName);
     }
 
     /**
@@ -182,18 +168,24 @@ class FileUploader
      *
      * @return array
      */
-    public function getMediaCollection(int $modifiedTime = 3600 * 24): array
+    public function getMediaCollection(int $modifiedTime = 0): array
     {
         $iterator = new \RecursiveDirectoryIterator(
-            sprintf('%s/%s', $this->publicPath, $this->mediaOriginalDirectory)
+            sprintf('%s/%s', $this->webRoot, $this->originalPrefix)
         );
 
         $mediaCollection = [];
 
         foreach (new \RecursiveIteratorIterator($iterator, \RecursiveIteratorIterator::SELF_FIRST) as $file) {
-            if (!$file->isFile() || $file->getMTime() > time() - $modifiedTime) {
+            if (
+                !$file->isFile()
+                || !$file->getFilename()
+                || !strncmp($file->getFilename(), '.', 1)
+                || (0 !== $modifiedTime && $file->getMTime() > time() - $modifiedTime)
+            ) {
                 continue;
             }
+
             $mediaCollection[] = (string) $file;
         }
 

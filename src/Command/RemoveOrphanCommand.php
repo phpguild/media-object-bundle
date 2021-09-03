@@ -50,19 +50,14 @@ class RemoveOrphanCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $mediaCollection = $this->resolveMediaObject->getMediaCollection();
-        $filesystemCollection = $this->fileUploader->getMediaCollection();
+        $filesystemCollection = $this->fileUploader->getMediaCollection(3600 * 24);
 
         $files = array_diff($filesystemCollection, $mediaCollection);
         $total = \count($files);
-        $count = 0;
 
+        $count = 0;
         foreach ($files as $file) {
-            if ('.gitignore' === basename($file)) {
-                continue;
-            }
-            if (unlink($file)) {
-                $count++;
-            }
+            $count += (int) unlink($file);
         }
 
         $output->writeln(sprintf('Delete %s file(s) of %s', $count, $total));

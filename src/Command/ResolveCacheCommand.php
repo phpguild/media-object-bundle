@@ -55,7 +55,7 @@ class ResolveCacheCommand extends Command
         foreach ($filesystemCollection as $file) {
             $fileName = basename($file);
             $image = sprintf('%s/%s', $this->fileUploader->getChunkedFileName($fileName), $fileName);
-            $count += $this->resolveCache->resolve($image);
+            $count += \count($this->resolveCache->resolve($image));
         }
 
         $output->writeln(
