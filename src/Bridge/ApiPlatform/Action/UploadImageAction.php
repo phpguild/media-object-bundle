@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpGuild\MediaObjectBundle\Bridge\ApiPlatform\Action;
 
+use ApiPlatform\Core\Validator\Exception\ValidationException;
 use Liip\ImagineBundle\Imagine\Cache\CacheManager;
 use PhpGuild\ApiBundle\Http\RequestHandler;
 use PhpGuild\MediaObjectBundle\Service\ResolveCache;
@@ -13,11 +14,12 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 
 /**
- * Class UploadAction.
+ * Class UploadImageAction.
  */
-class UploadAction extends AbstractController
+class UploadImageAction extends AbstractController
 {
     /** @var RequestHandler $requestHandler */
     private $requestHandler;
@@ -68,7 +70,22 @@ class UploadAction extends AbstractController
     public function __invoke(Request $request): Response
     {
         $data = $request->getContent();
-        $file = $this->fileUploader->prepare($data);
+
+        try {
+            $file = $this->fileUploader->prepare($data);
+            $mimeType = finfo_file(finfo_open(FILEINFO_MIME_TYPE), (string) $file);
+            if (0 !== strncmp($mimeType, 'image', 5)) {
+                throw new NotNormalizableValueException('The MimeType is not allowed.');
+            }
+        } catch (NotNormalizableValueException $exception) {
+            return $this->requestHandler->getResponse(
+                $this->requestHandler->normalize(
+                    new ValidationException($exception->getMessage())
+                ),
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
         $fileName = $this->fileUploader->copy($file);
 
         $fileSrc = $this->fileUploader->getAbsoluteFile($fileName);

@@ -12,13 +12,10 @@ namespace PhpGuild\MediaObjectBundle\Annotation;
  */
 class Uploadable
 {
-    /** @var string $default */
-    private $default = 'default.png';
+    /** @var string|null $filter */
+    private $filter;
 
-    /** @var string $filter */
-    private $filter = 'original';
-
-    /** @var string $urlProperty */
+    /** @var string|null $urlProperty */
     private $urlProperty;
 
     /**
@@ -28,29 +25,20 @@ class Uploadable
      */
     public function __construct(array $data)
     {
-        $this->default = $data['default'] ?? $this->default;
-        $this->filter = $data['filter'] ?? $this->filter;
-        $this->urlProperty = $data['urlProperty'] ?? $this->urlProperty;
-    }
-
-    /**
-     * getDefault
-     *
-     * @return string|null
-     */
-    public function getDefault(): ?string
-    {
-        return $this->default;
+        $this->filter = $data['filter'] ?? null;
+        $this->urlProperty = $data['urlProperty'] ?? null;
     }
 
     /**
      * getFilter
      *
+     * @param string|null $default
+     *
      * @return string|null
      */
-    public function getFilter(): ?string
+    public function getFilter(?string $default = null): ?string
     {
-        return $this->filter;
+        return $this->filter ?: $default;
     }
 
     /**

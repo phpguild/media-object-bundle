@@ -11,6 +11,7 @@ use Liip\ImagineBundle\Imagine\Cache\CacheManager;
 use PhpGuild\MediaObjectBundle\Annotation\Uploadable;
 use PhpGuild\MediaObjectBundle\Model\MediaObjectInterface;
 use PhpGuild\MediaObjectBundle\Upload\FileUploader;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -36,6 +37,9 @@ final class ResolveMediaObject
     /** @var CacheManager $cacheManager */
     private $cacheManager;
 
+    /** @var ?string $defaultFilter */
+    private $defaultFilter;
+
     /**
      * ResolveMediaObject constructor.
      *
@@ -44,19 +48,24 @@ final class ResolveMediaObject
      * @param PropertyAccessorInterface $propertyAccessor
      * @param FileUploader              $fileUploader
      * @param CacheManager              $cacheManager
+     * @param ParameterBagInterface     $parameterBag
      */
     public function __construct(
         EntityManagerInterface $entityManager,
         Reader $annotationReader,
         PropertyAccessorInterface $propertyAccessor,
         FileUploader $fileUploader,
-        CacheManager $cacheManager
+        CacheManager $cacheManager,
+        ParameterBagInterface $parameterBag
     ) {
         $this->entityManager = $entityManager;
         $this->annotationReader = $annotationReader;
         $this->propertyAccessor = $propertyAccessor;
         $this->fileUploader = $fileUploader;
         $this->cacheManager = $cacheManager;
+
+        $configuration = $parameterBag->get('phpguild_media_object');
+        $this->defaultFilter = $configuration['default_filter'] ?? null;
     }
 
     /**
@@ -91,7 +100,7 @@ final class ResolveMediaObject
             if ($file instanceof File) {
                 $url = $this->cacheManager->getBrowserPath(
                     $this->fileUploader->getChunkedFileName($file->getFilename()) . '/' . $file->getFilename(),
-                    $uploadable->getFilter()
+                    $uploadable->getFilter($this->defaultFilter)
                 );
             }
 

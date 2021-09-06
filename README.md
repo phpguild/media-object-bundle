@@ -52,7 +52,7 @@ Edit file `config/packages/liip_imagine.yaml`
 
     liip_imagine:
         driver: gd
-        default_image: '/media/default.png'
+        default_image: '/media/default.jpg'
         
         loaders:
             default:
@@ -109,9 +109,9 @@ Edit file `config/services.yaml`
 
 Edit file `config/routes.yaml`
 
-    api_phpguild_media_object_upload:
-        path: /api/upload
-        controller: PhpGuild\MediaObjectBundle\Bridge\ApiPlatform\Action
+    api_phpguild_media_object_upload_image:
+        path: /api/upload/image
+        controller: PhpGuild\MediaObjectBundle\Bridge\ApiPlatform\Action\UploadImageAction
         methods: POST
         defaults:
-            _api_item_operation_name: post_upload
+            _api_item_operation_name: post_upload_image
