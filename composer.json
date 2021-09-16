@@ -14,11 +14,12 @@
     "ext-fileinfo": "*",
     "php": ">=7.2",
     "liip/imagine-bundle": "^2.6",
-    "phpguild/doctrine-extra-bundle": "^1.0",
     "mashape/unirest-php": "^3.0",
+    "phpguild/doctrine-extra-bundle": "^1.0",
+    "symfony/form": "*",
+    "symfony/mime": "*",
     "symfony/property-access": "*",
-    "symfony/serializer": "*",
-    "symfony/mime": "*"
+    "symfony/serializer": "*"
   },
   "autoload": {
     "psr-4": {
